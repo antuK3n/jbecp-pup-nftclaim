@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Gabarito } from "next/font/google";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -9,6 +10,11 @@ const geistSans = localFont({
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
+});
+
+const gabarito = Gabarito({
+  subsets: ["latin"],
+  variable: "--font-gabarito",
 });
 
 export const metadata: Metadata = {
@@ -23,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${gabarito.variable}`}>
         {children}
       </body>
     </html>
