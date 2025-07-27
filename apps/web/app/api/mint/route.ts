@@ -5,9 +5,14 @@ export async function POST(request: NextRequest) {
   try {
     const { email, walletAddress } = await request.json();
 
+    console.log("🔍 Checking eligibility for email:", email);
+
     // Check if email is eligible (exists in database)
     const isEligible = await contractService.isEmailEligible(email);
+    console.log("📊 Email eligible:", isEligible);
+
     if (!isEligible) {
+      console.log("❌ Email not eligible:", email);
       return NextResponse.json(
         { error: "Email not eligible for NFT claim" },
         { status: 403 }
@@ -16,6 +21,8 @@ export async function POST(request: NextRequest) {
 
     // Check if email has already been used for minting
     const hasClaimed = await contractService.hasEmailClaimed(email);
+    console.log("📊 Email already claimed:", hasClaimed);
+
     if (hasClaimed) {
       return NextResponse.json(
         { error: "This email has already been used to claim an NFT" },
@@ -30,6 +37,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    console.log("✅ Proceeding with mint for email:", email);
 
     // Mint the NFT
     const txHash = await contractService.mintNFT(walletAddress, 1);
