@@ -13,14 +13,25 @@ const CONTRACT_ABI = [
 ];
 
 export class ContractService {
-  private provider: ethers.JsonRpcProvider;
-  private signer: ethers.Wallet;
+  private provider: ethers.JsonRpcProvider | null = null;
+  private signer: ethers.Wallet | null = null;
 
-  constructor() {
-    const rpcUrl =
-      process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.base.org";
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
-    this.signer = new ethers.Wallet(PRIVATE_KEY, this.provider);
+  private initializeProvider() {
+    if (!this.provider) {
+      const rpcUrl =
+        process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.base.org";
+      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    }
+  }
+
+  private initializeSigner() {
+    if (!this.signer) {
+      if (!PRIVATE_KEY) {
+        throw new Error("PRIVATE_KEY environment variable is not set");
+      }
+      this.initializeProvider();
+      this.signer = new ethers.Wallet(PRIVATE_KEY, this.provider!);
+    }
   }
 
   async mintNFT(toAddress: string, eventId: number = 1): Promise<string> {
@@ -29,10 +40,12 @@ export class ContractService {
         throw new Error("Contract address not configured");
       }
 
+      this.initializeSigner();
+
       const contract = new ethers.Contract(
         CONTRACT_ADDRESS,
         CONTRACT_ABI,
-        this.signer
+        this.signer!
       );
 
       if (!contract) {
@@ -62,10 +75,12 @@ export class ContractService {
         return 0;
       }
 
+      this.initializeProvider();
+
       const contract = new ethers.Contract(
         CONTRACT_ADDRESS,
         CONTRACT_ABI,
-        this.provider
+        this.provider!
       );
 
       if (!contract) {
@@ -85,10 +100,12 @@ export class ContractService {
         return null;
       }
 
+      this.initializeProvider();
+
       const contract = new ethers.Contract(
         CONTRACT_ADDRESS,
         CONTRACT_ABI,
-        this.provider
+        this.provider!
       );
 
       if (!contract) {

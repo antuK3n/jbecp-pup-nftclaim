@@ -35,9 +35,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Database
-/data/
-
 # Email data (privacy)
 emails.json
 emails.txt
