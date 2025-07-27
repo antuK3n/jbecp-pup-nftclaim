@@ -5,11 +5,15 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "types": ["node"]
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    "types/**/*.d.ts",
     "next-env.d.ts",
     "next.config.js",
     ".next/types/**/*.ts"

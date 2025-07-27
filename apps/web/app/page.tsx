@@ -4,12 +4,6 @@ import React from "react";
 import Image from "next/image";
 import * as THREE from 'three';
 
-const eligibleEmails = [
-  "user1@example.com",
-  "user2@example.com",
-  "user3@example.com",
-];
-
 export default function Home() {
   const [email, setEmail] = useState("");
   const [wallet, setWallet] = useState("");
@@ -18,6 +12,9 @@ export default function Home() {
   const [mobile, setMobile] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [showLogo, setShowLogo] = useState(true);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [isCheckingClaim, setIsCheckingClaim] = useState(false);
+  const [emailAlreadyClaimed, setEmailAlreadyClaimed] = useState(false);
   const cubeContainerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -54,6 +51,51 @@ export default function Home() {
       clearTimeout(logoTimer);
     };
   }, []);
+
+  // Check if email has already been claimed
+  const checkEmailClaimStatus = async (emailToCheck: string) => {
+    if (!emailToCheck) {
+      setEmailAlreadyClaimed(false);
+      return;
+    }
+
+    setIsCheckingClaim(true);
+    try {
+      const response = await fetch('/api/check-claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: emailToCheck }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setEmailAlreadyClaimed(data.hasClaimed);
+        if (data.hasClaimed) {
+          setStatus("This email has already been used to claim an NFT");
+        } else {
+          setStatus("");
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check claim status:', error);
+    } finally {
+      setIsCheckingClaim(false);
+    }
+  };
+
+  // Debounced email check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (email) {
+        checkEmailClaimStatus(email);
+      }
+    }, 1000); // Wait 1 second after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [email]);
 
   // Three.js 3D Cube Scene Setup
   useEffect(() => {
@@ -185,7 +227,7 @@ export default function Home() {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
-    };
+};
 
     window.addEventListener('resize', handleResize);
 
@@ -199,18 +241,63 @@ export default function Home() {
     };
   }, []);
 
-  const handleClaim = (e: React.FormEvent) => {
+  const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eligibleEmails.includes(email)) {
-      setStatus("Not eligible");
+    
+    // Trim wallet address to handle copy-paste issues
+    const trimmedWallet = wallet.trim();
+    
+    if (!trimmedWallet) {
+      setStatus("Please enter your wallet address");
       return;
     }
+    
+    // Basic wallet address validation
+    if (!/^0x[a-fA-F0-9]{40}$/.test(trimmedWallet)) {
+      setStatus("Please enter a valid wallet address");
+      return;
+    }
+    
+    if (emailAlreadyClaimed) {
+      setStatus("This email has already been used to claim an NFT");
+      return;
+    }
+    
     if (claimed) {
-      setStatus("Already claimed");
+      setStatus("NFT already claimed");
       return;
     }
-    setClaimed(true);
-    setStatus("Success! NFT claimed.");
+
+    setIsClaiming(true);
+    setStatus("Claiming NFT...");
+
+    try {
+      const response = await fetch('/api/mint', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          walletAddress: trimmedWallet,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setClaimed(true);
+        setEmailAlreadyClaimed(true);
+        setStatus(`Success! NFT claimed. Transaction: ${data.transactionHash}`);
+      } else {
+        setStatus(data.error || "Failed to claim NFT");
+      }
+    } catch (error) {
+      console.error('Claim error:', error);
+      setStatus("Failed to claim NFT. Please try again.");
+    } finally {
+      setIsClaiming(false);
+    }
   };
 
   return (
@@ -416,7 +503,9 @@ export default function Home() {
                 width: '100%',
                 padding: '16px',
                 fontSize: '16px',
-                border: '2px solid rgba(225, 6, 0, 0.3)',
+                border: emailAlreadyClaimed 
+                  ? '2px solid rgba(239, 68, 68, 0.5)' 
+                  : '2px solid rgba(225, 6, 0, 0.3)',
                 borderRadius: '12px',
                 background: 'rgba(255, 255, 255, 0.1)',
                 color: '#ffffff',
@@ -424,6 +513,60 @@ export default function Home() {
                 transition: 'all 0.2s ease',
                 boxSizing: 'border-box',
                 backdropFilter: 'blur(10px)',
+              }}
+              onFocus={e => {
+                e.target.style.borderColor = emailAlreadyClaimed ? '#ef4444' : '#e10600';
+                e.target.style.boxShadow = `0 0 0 3px ${emailAlreadyClaimed ? 'rgba(239, 68, 68, 0.2)' : 'rgba(225, 6, 0, 0.2)'}`;
+                e.target.style.background = 'rgba(255, 255, 255, 0.15)';
+              }}
+              onBlur={e => {
+                e.target.style.borderColor = emailAlreadyClaimed ? 'rgba(239, 68, 68, 0.5)' : 'rgba(225, 6, 0, 0.3)';
+                e.target.style.boxShadow = 'none';
+                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+            />
+            {isCheckingClaim && (
+              <div style={{
+                marginTop: '8px',
+                fontSize: '12px',
+                color: '#fbbf24',
+                fontStyle: 'italic',
+              }}>
+                Checking claim status...
+              </div>
+            )}
+          </div>
+
+          {/* Wallet Address Input */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#ffffff',
+              marginBottom: '8px',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+            }}>
+              Wallet Address
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Enter your wallet address"
+              value={wallet}
+              onChange={e => setWallet(e.target.value)}
+              style={{
+                width: '100%',
+                              padding: '16px',
+              fontSize: '16px',
+              border: '2px solid rgba(225, 6, 0, 0.3)',
+              borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: '#ffffff',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              boxSizing: 'border-box',
+              backdropFilter: 'blur(10px)',
               }}
               onFocus={e => {
                 e.target.style.borderColor = '#e10600';
@@ -438,86 +581,10 @@ export default function Home() {
             />
           </div>
 
-          {/* Wallet Input */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#ffffff',
-              marginBottom: '8px',
-              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
-            }}>
-              Wallet Address
-            </label>
-            {mobile ? (
-              <input
-                type="text"
-                required
-                placeholder="Enter wallet address"
-                value={wallet}
-                onChange={e => setWallet(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  fontSize: '16px',
-                  border: '2px solid rgba(225, 6, 0, 0.3)',
-                  borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: '#ffffff',
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  boxSizing: 'border-box',
-                  backdropFilter: 'blur(10px)',
-                }}
-                onFocus={e => {
-                  e.target.style.borderColor = '#e10600';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(225, 6, 0, 0.2)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.15)';
-                }}
-                onBlur={e => {
-                  e.target.style.borderColor = 'rgba(225, 6, 0, 0.3)';
-                  e.target.style.boxShadow = 'none';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                }}
-              />
-            ) : (
-              <button
-                type="button"
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  fontSize: '16px',
-                  border: '2px solid rgba(225, 6, 0, 0.3)',
-                  borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: '#cccccc',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left',
-                  fontWeight: '500',
-                  backdropFilter: 'blur(10px)',
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.borderColor = '#e10600';
-                  e.currentTarget.style.color = '#ffffff';
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.borderColor = 'rgba(225, 6, 0, 0.3)';
-                  e.currentTarget.style.color = '#cccccc';
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                }}
-                onClick={() => alert("RainbowKit connect coming soon!")}
-              >
-                Connect Wallet
-              </button>
-            )}
-          </div>
-
           {/* Claim Button */}
           <button
             type="submit"
+            disabled={isClaiming || !wallet.trim() || !email || emailAlreadyClaimed}
             style={{
               width: '100%',
               padding: '18px',
@@ -525,23 +592,31 @@ export default function Home() {
               fontWeight: '700',
               border: 'none',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #e10600 0%, #ff3c3c 100%)',
-              color: '#fff',
-              cursor: 'pointer',
+              background: isClaiming || !wallet.trim() || !email || emailAlreadyClaimed
+                ? 'rgba(255, 255, 255, 0.1)' 
+                : 'linear-gradient(135deg, #e10600 0%, #ff3c3c 100%)',
+              color: isClaiming || !wallet.trim() || !email || emailAlreadyClaimed ? '#666666' : '#fff',
+              cursor: isClaiming || !wallet.trim() || !email || emailAlreadyClaimed ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
               marginTop: '8px',
-              boxShadow: '0 4px 12px rgba(225, 6, 0, 0.4), 0 0 0 1px rgba(225, 6, 0, 0.2)',
+              boxShadow: isClaiming || !wallet.trim() || !email || emailAlreadyClaimed
+                ? 'none' 
+                : '0 4px 12px rgba(225, 6, 0, 0.4), 0 0 0 1px rgba(225, 6, 0, 0.2)',
             }}
             onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(225, 6, 0, 0.6), 0 0 0 1px rgba(225, 6, 0, 0.3)';
+              if (!isClaiming && wallet.trim() && email && !emailAlreadyClaimed) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(225, 6, 0, 0.6), 0 0 0 1px rgba(225, 6, 0, 0.3)';
+              }
             }}
             onMouseOut={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(225, 6, 0, 0.4), 0 0 0 1px rgba(225, 6, 0, 0.2)';
+              if (!isClaiming && wallet.trim() && email && !emailAlreadyClaimed) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(225, 6, 0, 0.4), 0 0 0 1px rgba(225, 6, 0, 0.2)';
+              }
             }}
           >
-            Claim NFT
+            {isClaiming ? 'Claiming...' : emailAlreadyClaimed ? 'Already Claimed' : 'Claim NFT'}
           </button>
         </form>
 
@@ -554,13 +629,13 @@ export default function Home() {
             fontSize: '14px',
             fontWeight: '600',
             textAlign: 'center',
-            background: status === "Success! NFT claimed." 
+            background: status.includes("Success") || status.includes("connected")
               ? 'rgba(34, 197, 94, 0.2)' 
               : 'rgba(239, 68, 68, 0.2)',
-            color: status === "Success! NFT claimed." 
+            color: status.includes("Success") || status.includes("connected")
               ? '#4ade80' 
               : '#f87171',
-            border: `1px solid ${status === "Success! NFT claimed." 
+            border: `1px solid ${status.includes("Success") || status.includes("connected")
               ? 'rgba(34, 197, 94, 0.3)' 
               : 'rgba(239, 68, 68, 0.3)'}`,
             backdropFilter: 'blur(10px)',
@@ -578,7 +653,7 @@ export default function Home() {
           fontWeight: '500',
         }}>
           <a 
-            href="https://example.com" 
+            href="https://github.com/antuK3n/jbecp-pup-nftclaim" 
             target="_blank"
             rel="noopener noreferrer"
             style={{

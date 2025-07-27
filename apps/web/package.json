@@ -8,7 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "db:status": "tsx scripts/seed-database.ts",
+    "db:add": "tsx scripts/add-emails.ts",
+    "db:import": "tsx scripts/import-emails.ts",
+    "db:import-json": "tsx scripts/import-json.ts"
   },
   "dependencies": {
     "@repo/ui": "*",
@@ -16,15 +20,19 @@
     "next": "^15.4.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "sqlite3": "^5.1.7",
     "three": "^0.178.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
+    "@types/minimatch": "^6.0.0",
     "@types/node": "^22.15.3",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.1",
+    "@types/sqlite3": "^5.1.0",
     "eslint": "^9.31.0",
+    "tsx": "^4.19.2",
     "typescript": "5.8.2"
   }
 }
