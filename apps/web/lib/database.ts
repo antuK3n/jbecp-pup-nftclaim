@@ -20,27 +20,27 @@ export class Database {
           : false,
     });
 
-    this.initTable();
+    // this.initTable();
   }
 
-  private async initTable() {
-    try {
-      const createTableSQL = `
-        CREATE TABLE IF NOT EXISTS claimed_emails (
-          id SERIAL PRIMARY KEY,
-          email VARCHAR(255) UNIQUE NOT NULL,
-          wallet_address VARCHAR(255) NOT NULL,
-          transaction_hash VARCHAR(255),
-          claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
+  // private async initTable() {
+  //   try {
+  //     const createTableSQL = `
+  //       CREATE TABLE IF NOT EXISTS claimed_emails (
+  //         id SERIAL PRIMARY KEY,
+  //         email VARCHAR(255) UNIQUE NOT NULL,
+  //         wallet_address VARCHAR(255) NOT NULL,
+  //         transaction_hash VARCHAR(255),
+  //         claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  //       )
+  //     `;
 
-      await this.pool.query(createTableSQL);
-      console.log("Claimed emails table ready");
-    } catch (error) {
-      console.error("Error creating table:", error);
-    }
-  }
+  //     await this.pool.query(createTableSQL);
+  //     console.log("Claimed emails table ready");
+  //   } catch (error) {
+  //     console.error("Error creating table:", error);
+  //   }
+  // }
 
   async hasEmailClaimed(email: string): Promise<boolean> {
     try {

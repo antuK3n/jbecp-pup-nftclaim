@@ -12,25 +12,27 @@
     "db:status": "tsx scripts/seed-database.ts",
     "db:add": "tsx scripts/add-emails.ts",
     "db:import": "tsx scripts/import-emails.ts",
-    "db:import-json": "tsx scripts/import-json.ts"
+    "db:import-json": "tsx scripts/import-json.ts",
+    "db:import-supabase": "tsx scripts/import-to-supabase.ts"
   },
   "dependencies": {
     "@repo/ui": "*",
     "@types/three": "^0.178.1",
     "next": "^15.4.2",
+    "pg": "^8.16.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "pg": "^8.11.3",
-    "three": "^0.178.0"
+    "three": "^0.178.0",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@types/minimatch": "^6.0.0",
     "@types/node": "^22.15.3",
+    "@types/pg": "^8.10.9",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.1",
-    "@types/pg": "^8.10.9",
     "eslint": "^9.31.0",
     "tsx": "^4.19.2",
     "typescript": "5.8.2"
