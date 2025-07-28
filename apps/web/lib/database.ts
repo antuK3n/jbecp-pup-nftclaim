@@ -94,13 +94,12 @@ export class Database {
   ): Promise<void> {
     try {
       await this.pool.query(
-        "INSERT INTO claimed_emails (email, wallet_address, transaction_hash) VALUES ($1, $2, $3)",
+        "UPDATE claimed_emails SET wallet_address = $2, transaction_hash = $3 WHERE email = $1",
         [email, walletAddress, transactionHash || null]
       );
-      console.log(`Email ${email} marked as claimed`);
-    } catch (error) {
-      console.error("Error marking email as claimed:", error);
-      throw error;
+    } catch (err) {
+      console.error("Error marking email as claimed:", err);
+      throw err;
     }
   }
 
