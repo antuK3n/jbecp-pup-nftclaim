@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import "./test-db-connection";
 
 interface ClaimedEmail {
   id: number;
